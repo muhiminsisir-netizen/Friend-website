@@ -39,6 +39,13 @@ When the terminal prints `Friends Group app ready at ...`, leave it open while u
 - For chat calls, set `TURN_URLS` and `TURN_SHARED_SECRET` to a TURN service configured with the TURN REST shared-secret mechanism. Keep the shared secret only in `.env`; the app returns short-lived credentials to signed-in users. Without TURN, calls use STUN and may not connect on all networks. Chat location is shared only after the browser asks permission; live updates stop when the user stops sharing or the share expires.
 - The app is intended for a trusted group. Before exposing it to the internet, deploy behind HTTPS and review access, backups, and your SMS provider's API format.
 
+## Deploy on Render
+
+1. Open the web service in the Render Dashboard and select **Environment**.
+2. Add `SESSION_SECRET` with a newly generated random value of at least 32 characters. In PowerShell, generate one with `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
+3. Save and deploy. Keep this value private and stable; do not put it in source code or commit it to Git.
+4. The service uses Render's `PORT` and binds to `0.0.0.0` in production. Local development continues to bind to `127.0.0.1`.
+
 ## Fixing a blank page
 
 Keep the server terminal open and check that it says `app ready`. Open the exact address and port printed in that message. If the port was changed, use that port (for example `http://127.0.0.1:3001`). Refresh once. If it still appears blank, check the browser's developer console and the server terminal for errors.
