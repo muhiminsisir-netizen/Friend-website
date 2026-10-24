@@ -1,0 +1,44 @@
+# Friends Group — Tours, Memories & Payments
+
+A private, responsive website for a friends group, built with Node.js, Express and SQLite. Members sign in to see group tours, their own contributions, announcements and eligible tour photos. Administrators manage the group from the same site.
+
+## Run it in VS Code on Windows
+
+1. Install **Node.js 22.5 or newer**. The app uses Node's built-in SQLite module.
+2. In VS Code, open this project folder: `C:\Users\NEXT GEN IT\Desktop\f.website`.
+3. Open **Terminal → New Terminal** and run `npm install` once.
+4. Start the site with `npm run dev`.
+5. Open **http://127.0.0.1:3000** in your browser.
+6. On the first visit, create the admin account. There is no default username or password. Save the credentials somewhere safe.
+
+If the terminal says `EADDRINUSE` or that port 3000 is already in use, another copy of this site is already using it. Go to that terminal and press **Ctrl+C** once, then run `npm run dev` again. If you cannot find the old terminal, use another PowerShell window and run `$env:PORT=3001; npm run dev`, then open **http://127.0.0.1:3001**. Do not start multiple copies on the same port.
+
+When the terminal prints `Friends Group app ready at ...`, leave it open while using the site. To stop the site, focus that terminal and press **Ctrl+C**.
+
+## Included features
+
+- First-admin setup, login/logout, admin and member roles, hashed passwords, rate-limited login, and persistent SQLite sessions.
+- Member self-registration with immediate access using a name, phone number, and password. Existing member records can be claimed by phone number.
+- Self-service profile name, nickname, phone, bio, and photo editing, plus authenticated real-time group and private chat. Chat includes unread counts, typing status, online/last-seen privacy, read state, replies, edit/delete, emoji reactions, search, history paging, and 25 MB image/video/audio/document attachments.
+- Consent-based one-time and live location shares in chat, plus one-to-one audio/video calls using browser WebRTC. Configure a TURN server for reliable calls across restrictive networks; STUN-only calls may fail behind some NAT/firewalls. Group voice/video calls, GIF/sticker search, and push notifications are not included.
+- Member records, optional member logins, profile photos, active/inactive accounts, and admin-only phone numbers.
+- Create and edit tours, select participants, set contribution/budget, status, dates, description and map coordinates; add ordered route stops; show maps and a live countdown.
+- Record partial contributions, unique receipt numbers, receipt history and printable receipts; prevent duplicate transaction references and over-collection; waiver controls.
+- Tour expenses and budget summary, payment history, CSV export, and downloadable SQLite backup.
+- Private tour photo albums with multi-image upload, captions, location/date/featured metadata, editing and deletion.
+- Group name, welcome text, contact link, logo, homepage hero-image, and SMS delivery status log settings.
+- Group announcements, SMS provider status log, responsive English interface, and BDT amounts.
+- Optional, consent-based live tour location sharing with bus/train markers on an OpenStreetMap route.
+
+## Important setup notes
+
+- The database is created at `data/friends.db`; uploaded photos are stored in `uploads/`.
+- To change the port, set `PORT` before starting Node. Example PowerShell: `$env:PORT=3001; npm run dev`.
+- Copy `.env.example` to `.env` before deployment. Set a long, random `SESSION_SECRET` and your `GROUP_NAME`. Keep `.env`, `data/`, and `uploads/` private and backed up.
+- For payment SMS, create a Twilio account with an SMS-capable sender, then set `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` in `.env`. Copy `.env.example` to `.env`, enter the credentials privately, and restart the server. The member's saved phone must be in international format (for example, `+8801XXXXXXXXX`). Twilio accepting a message means queued for sending, not guaranteed delivery; delivery depends on carrier, account, sender, and destination-country permissions. bKash/Nagad entries are records only; the app does not verify online payments.
+- For chat calls, set `TURN_URLS` and `TURN_SHARED_SECRET` to a TURN service configured with the TURN REST shared-secret mechanism. Keep the shared secret only in `.env`; the app returns short-lived credentials to signed-in users. Without TURN, calls use STUN and may not connect on all networks. Chat location is shared only after the browser asks permission; live updates stop when the user stops sharing or the share expires.
+- The app is intended for a trusted group. Before exposing it to the internet, deploy behind HTTPS and review access, backups, and your SMS provider's API format.
+
+## Fixing a blank page
+
+Keep the server terminal open and check that it says `app ready`. Open the exact address and port printed in that message. If the port was changed, use that port (for example `http://127.0.0.1:3001`). Refresh once. If it still appears blank, check the browser's developer console and the server terminal for errors.
