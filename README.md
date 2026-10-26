@@ -46,6 +46,18 @@ When the terminal prints `Friends Group app ready at ...`, leave it open while u
 3. Save and deploy. Keep this value private and stable; do not put it in source code or commit it to Git.
 4. The service uses Render's `PORT` and binds to `0.0.0.0` in production. Local development continues to bind to `127.0.0.1`.
 
+## Firebase setup
+
+The server uses Firebase Admin SDK credentials; never place the service-account JSON or its private key in browser JavaScript or Git.
+
+1. In Firebase Console, open project `f-website-f9e07`, create a **Cloud Firestore** database, and enable **Storage**.
+2. In **Project settings → Service accounts**, generate a private key JSON and keep it on your computer.
+3. In PowerShell, encode that file for Render: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\service-account.json"))`.
+4. In Render → your web service → **Environment**, add `FIREBASE_PROJECT_ID=f-website-f9e07`, `FIREBASE_STORAGE_BUCKET` (copy the exact bucket name from Firebase Storage), and `FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64` (the encoded JSON). Keep the secret value private.
+5. Save and deploy. Production startup checks both Firestore and Storage. New photo and chat-file uploads are copied to Storage and can be served after local files are absent.
+
+The existing application data and login/session tables still use SQLite. Firestore is currently used for the connection check; moving all relational app records to Firestore requires an explicit data migration. The app does not automatically replace its local database with Firestore data on startup.
+
 ## Fixing a blank page
 
 Keep the server terminal open and check that it says `app ready`. Open the exact address and port printed in that message. If the port was changed, use that port (for example `http://127.0.0.1:3001`). Refresh once. If it still appears blank, check the browser's developer console and the server terminal for errors.

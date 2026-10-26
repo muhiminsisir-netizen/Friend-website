@@ -1,5 +1,7 @@
 node_modules/
 .env
+firebase-admin*.json
+service-account*.json
 data/*.db*
 uploads/**
 !uploads/.gitkeep
