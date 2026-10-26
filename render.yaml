@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: f-website-backend
+    runtime: node
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    disk:
+      name: friends-group-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DB_PATH
+        value: /var/data/friends.db
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
+      - key: GROUP_NAME
+        value: Friends Group
+      - key: TIMEZONE
+        value: Asia/Dhaka

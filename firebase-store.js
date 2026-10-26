@@ -5,7 +5,7 @@ const { cert, initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
 
-function createFirebaseStore({ projectId, serviceAccountBase64, serviceAccountJson, storageBucket }) {
+function createFirebaseStore({ projectId, serviceAccountBase64, serviceAccountJson, storageBucket, uploadsDir = path.join(__dirname, 'uploads') }) {
   let serviceAccount;
   try {
     if (serviceAccountBase64) serviceAccount = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf8'));
@@ -29,7 +29,7 @@ function createFirebaseStore({ projectId, serviceAccountBase64, serviceAccountJs
     await bucket.upload(file.path, { destination: path.basename(file.filename), metadata: { cacheControl: 'private, max-age=3600' } });
   }
   async function sendUpload(filename, res) {
-    const safe = path.basename(filename), local = path.join(__dirname, 'uploads', safe);
+    const safe = path.basename(filename), local = path.join(uploadsDir, safe);
     if (fs.existsSync(local)) { return res.sendFile(local); }
     const file = bucket.file(safe), [exists] = await file.exists();
     if (!exists) return res.sendStatus(404);

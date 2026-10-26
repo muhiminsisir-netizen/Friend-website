@@ -1,63 +1,72 @@
-# Friends Group — Tours, Memories & Payments
+# Friends Group Website
 
-A private, responsive website for a friends group, built with Node.js, Express and SQLite. Members sign in to see group tours, their own contributions, announcements and eligible tour photos. Administrators manage the group from the same site.
+The existing Node.js/Express application is preserved. Its HTML/CSS/JS frontend is published by Netlify; the Express API runs as a separate Node web service. The application continues to use SQLite, its existing authentication/session logic, and its existing Server-Sent Events (SSE) chat. No features or database schema are replaced for deployment.
 
-## Run it in VS Code on Windows
+## Recommended deployment layout
 
-1. Install **Node.js 22.5 or newer**. The app uses Node's built-in SQLite module.
-2. In VS Code, open this project folder: `C:\Users\NEXT GEN IT\Desktop\f.website`.
-3. Open **Terminal → New Terminal** and run `npm install` once.
-4. Start the site with `npm run dev`.
-5. Open **http://127.0.0.1:3000** in your browser.
-6. On the first visit, create the admin account. There is no default username or password. Save the credentials somewhere safe.
+- **Netlify:** publishes `public/` through the configured `dist/` build. A generated proxy sends `/api/*` and `/uploads/*` requests to the backend, keeping browser requests same-origin so existing session cookies and frontend URLs continue to work.
+- **Render Web Service:** runs `server.js` as a long-running Express server. This keeps the current SSE chat stream on a persistent server instead of trying to run it as a short-lived Netlify Function.
+- **Render persistent disk:** stores SQLite records, SQLite sessions, and uploaded files below `/var/data`. The included `render.yaml` configures a 1 GB disk and one backend instance. Do not scale this service to multiple instances: chat presence/broadcast and SQLite currently depend on one process/disk.
 
-If the terminal says `EADDRINUSE` or that port 3000 is already in use, another copy of this site is already using it. Go to that terminal and press **Ctrl+C** once, then run `npm run dev` again. If you cannot find the old terminal, use another PowerShell window and run `$env:PORT=3001; npm run dev`, then open **http://127.0.0.1:3001**. Do not start multiple copies on the same port.
+Netlify static publishing and external proxy rewrites are described in the [Netlify build configuration](https://docs.netlify.com/build/configure-builds/file-based-configuration/) and [proxy rewrite documentation](https://docs.netlify.com/manage/routing/redirects/rewrites-proxies/). Netlify Functions can stream responses but have a 60-second streaming execution limit; they are not a replacement for this app's long-lived SSE endpoint ([Netlify Functions API](https://docs.netlify.com/build/functions/api/)).
 
-When the terminal prints `Friends Group app ready at ...`, leave it open while using the site. To stop the site, focus that terminal and press **Ctrl+C**.
+## Deploy from GitHub
 
-## Included features
+### 1. Push the project to GitHub safely
 
-- First-admin setup, login/logout, admin and member roles, hashed passwords, rate-limited login, and persistent SQLite sessions.
-- Member self-registration with immediate access using a name, phone number, and password. Existing member records can be claimed by phone number.
-- Self-service profile name, nickname, phone, bio, and photo editing, plus authenticated real-time group and private chat. Chat includes unread counts, typing status, online/last-seen privacy, read state, replies, edit/delete, emoji reactions, search, history paging, and 25 MB image/video/audio/document attachments.
-- Consent-based one-time and live location shares in chat, plus one-to-one audio/video calls using browser WebRTC. Configure a TURN server for reliable calls across restrictive networks; STUN-only calls may fail behind some NAT/firewalls. Group voice/video calls, GIF/sticker search, and push notifications are not included.
-- Member records, optional member logins, profile photos, active/inactive accounts, and admin-only phone numbers.
-- Create and edit tours, select participants, set contribution/budget, status, dates, description and map coordinates; add ordered route stops; show maps and a live countdown.
-- Record partial contributions, unique receipt numbers, receipt history and printable receipts; prevent duplicate transaction references and over-collection; waiver controls.
-- Tour expenses and budget summary, payment history, CSV export, and downloadable SQLite backup.
-- Private tour photo albums with multi-image upload, captions, location/date/featured metadata, editing and deletion.
-- Group name, welcome text, contact link, logo, homepage hero-image, and SMS delivery status log settings.
-- Group announcements, SMS provider status log, responsive English interface, and BDT amounts.
-- Optional, consent-based live tour location sharing with bus/train markers on an OpenStreetMap route.
+1. Commit the source and deployment files.
+2. Do **not** commit `.env`, `data/`, `uploads/`, a SQLite database, a service-account JSON, or passwords. These are ignored by `.gitignore`.
+3. `FIREBASE_PROJECT_ID` is a public project identifier; service-account credentials are private and must stay out of GitHub.
 
-## Important setup notes
+### 2. Create the backend from Render Blueprint
 
-- The database is created at `data/friends.db`; uploaded photos are stored in `uploads/`.
-- To change the port, set `PORT` before starting Node. Example PowerShell: `$env:PORT=3001; npm run dev`.
-- Copy `.env.example` to `.env` before deployment. Set a long, random `SESSION_SECRET` and your `GROUP_NAME`. Keep `.env`, `data/`, and `uploads/` private and backed up.
-- For payment SMS, create a Twilio account with an SMS-capable sender, then set `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` in `.env`. Copy `.env.example` to `.env`, enter the credentials privately, and restart the server. The member's saved phone must be in international format (for example, `+8801XXXXXXXXX`). Twilio accepting a message means queued for sending, not guaranteed delivery; delivery depends on carrier, account, sender, and destination-country permissions. bKash/Nagad entries are records only; the app does not verify online payments.
-- For chat calls, set `TURN_URLS` and `TURN_SHARED_SECRET` to a TURN service configured with the TURN REST shared-secret mechanism. Keep the shared secret only in `.env`; the app returns short-lived credentials to signed-in users. Without TURN, calls use STUN and may not connect on all networks. Chat location is shared only after the browser asks permission; live updates stop when the user stops sharing or the share expires.
-- The app is intended for a trusted group. Before exposing it to the internet, deploy behind HTTPS and review access, backups, and your SMS provider's API format.
+1. In Render, choose **New → Blueprint** and connect the GitHub repository.
+2. Render reads `render.yaml` and previews the backend service and its cost. Review/confirm the paid service and disk before creating it.
+3. Wait for the first deployment to become live. Render generates `SESSION_SECRET`; the Blueprint sets `DB_PATH=/var/data/friends.db` and `UPLOADS_DIR=/var/data/uploads`.
+4. Copy the backend URL, for example `https://f-website-backend.onrender.com`.
+5. Check `https://YOUR-BACKEND-URL/healthz`; it should return `{"ok":true}`.
 
-## Deploy on Render
+The current Render pricing lists the small paid web instance at **$7/month** and persistent disks at **$0.25/GB/month**. With the configured 1 GB disk, the starting estimate is about **$7.25/month**, before bandwidth or other usage/tax. Prices can change; review the Render cost preview before creating the Blueprint. A free Render web service sleeps after 15 minutes without traffic and loses local file changes on sleep/redeploy. Free Postgres expires after 30 days, so neither is suitable for this SQLite/upload configuration ([Render free limits](https://render.com/docs/free), [disk behavior](https://render.com/docs/disks), [pricing](https://render.com/pricing/)).
 
-1. Open the web service in the Render Dashboard and select **Environment**.
-2. Add `SESSION_SECRET` with a newly generated random value of at least 32 characters. In PowerShell, generate one with `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
-3. Save and deploy. Keep this value private and stable; do not put it in source code or commit it to Git.
-4. The service uses Render's `PORT` and binds to `0.0.0.0` in production. Local development continues to bind to `127.0.0.1`.
+### 3. Publish the frontend on Netlify
 
-## Firebase setup
+1. In Netlify, choose **Add new site → Import an existing project** and connect the same GitHub repository.
+2. Netlify reads `netlify.toml`: build command `npm run build:netlify`, publish folder `dist`.
+3. Before the first production deploy, open **Site configuration → Environment variables** and add `BACKEND_URL` with the exact HTTPS Render backend origin (no trailing path, for example `https://f-website-backend.onrender.com`). Give it **Builds** scope, then trigger a new deploy.
+4. Netlify's build writes the API and upload proxy rules into `dist/_redirects`. The browser uses same-origin `/api` requests, cookies, and SSE endpoint; no permissive wildcard CORS is required.
+5. Open the Netlify HTTPS URL and test registration, sign-in, member pages, uploads and chat with two browser sessions.
 
-The server uses Firebase Admin SDK credentials; never place the service-account JSON or its private key in browser JavaScript or Git.
+Netlify's current Free plan includes **300 monthly credits** with a hard limit; the site pauses after the limit until the next cycle, rather than charging over the Free limit. The exact credit usage depends on deploys, bandwidth, requests, and other enabled services ([Netlify pricing](https://www.netlify.com/pricing/), [how credits work](https://docs.netlify.com/manage/accounts-and-billing/billing/billing-for-credit-based-plans/how-credits-work/)).
 
-1. In Firebase Console, open project `f-website-f9e07`, create a **Cloud Firestore** database, and enable **Storage**.
-2. In **Project settings → Service accounts**, generate a private key JSON and keep it on your computer.
-3. In PowerShell, encode that file for Render: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\service-account.json"))`.
-4. In Render → your web service → **Environment**, add `FIREBASE_PROJECT_ID=f-website-f9e07`, `FIREBASE_STORAGE_BUCKET` (copy the exact bucket name from Firebase Storage), and `FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64` (the encoded JSON). Keep the secret value private.
-5. Save and deploy. Production startup checks both Firestore and Storage. New photo and chat-file uploads are copied to Storage and can be served after local files are absent.
+## Persistent data and existing local records
 
-The existing application data and login/session tables still use SQLite. Firestore is currently used for the connection check; moving all relational app records to Firestore requires an explicit data migration. The app does not automatically replace its local database with Firestore data on startup.
+The server now honors `DB_PATH` and `UPLOADS_DIR`; its default local paths remain `data/friends.db` and `uploads/`. The Render Blueprint points both to the persistent disk. Sessions are stored in the same SQLite database. Uploaded album images and chat attachments use the persistent upload directory.
 
-## Fixing a blank page
+**No local database or upload migration is performed by these deployment changes.** The local `data/friends.db` and `uploads/` remain on your computer and are not sent to GitHub or Render. The first backend start creates a new empty database on its persistent disk. If you need your current local members/tours/payments/photos, do not invite members or create production records before arranging a verified migration. SQLite records and uploaded files need separate backups; blindly replacing an already-used production database can destroy online records. Stop writes, back up both the database and uploads, verify the copies, and only then transfer/restore them to the disk. This project does not yet include a one-click production restore/import tool.
 
-Keep the server terminal open and check that it says `app ready`. Open the exact address and port printed in that message. If the port was changed, use that port (for example `http://127.0.0.1:3001`). Refresh once. If it still appears blank, check the browser's developer console and the server terminal for errors.
+The current application database remains SQLite on Render's persistent disk. The prior Firebase Admin integration is optional and can mirror new uploaded files to Firebase Storage when service-account credentials and a bucket are configured; **Firestore is not currently the source of truth for users, tours, payments, sessions, or chat**. Changing those records to Firestore/Postgres would require a separately planned and validated data migration; this deployment does not do that.
+
+## Environment variables
+
+The Render Blueprint sets `NODE_ENV`, `SESSION_SECRET`, `DB_PATH`, `UPLOADS_DIR`, `GROUP_NAME`, and `TIMEZONE`. Configure optional values in the Render service's Environment page:
+
+- SMS: `SMS_PROVIDER`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`.
+- WebRTC connectivity: `TURN_URLS`, `TURN_SHARED_SECRET`; STUN alone may fail on restrictive networks.
+- Optional Firebase Storage file copy: `FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64`, `FIREBASE_STORAGE_BUCKET`, and optionally `FIREBASE_PROJECT_ID`. Never expose the private key in frontend code, Netlify variables, or GitHub.
+
+See `.env.example` for local development variable names. Keep production secrets in Render's environment settings. Do not enable Firebase variables until the Firebase Storage bucket and service account are correctly configured.
+
+## Run locally
+
+1. Install Node.js 22.5 or newer.
+2. Run `npm install`.
+3. Run `npm run dev`.
+4. Open `http://127.0.0.1:3000`.
+
+If port 3000 is already used, stop the other server with Ctrl+C or choose a different `PORT`.
+
+## Checks and deployment status
+
+Run `npm run build:netlify` locally to verify the static publish build (without `BACKEND_URL` it builds static assets only). On Netlify, `BACKEND_URL` is required. Run `node --check server.js` and `node --check scripts/build-netlify.js` for syntax checks. This repository has no automated test suite yet.
+
+No Netlify or Render account was accessed and no live deployment has been performed from this workspace. A successful local build does not prove online registration, cookies, uploads, or SSE chat; verify those against the deployed URLs before sharing the site.

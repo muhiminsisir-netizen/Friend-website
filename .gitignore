@@ -1,9 +1,14 @@
 node_modules/
 .env
+.env.*
+!.env.example
 firebase-admin*.json
 service-account*.json
+*.pem
 data/*.db*
 uploads/**
 !uploads/.gitkeep
 backups/
+dist/
+.netlify/
 npm-debug.log*
